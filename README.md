@@ -2,7 +2,7 @@
 A hackathon repository regarding the "AI powered personal health copilot ."
 
 
-CureBuddy is an AI-powered healthcare assistant designed to simplify and organize an individual's healthcare journey.
+Vitapoilet is an AI-powered healthcare assistant designed to simplify and organize an individual's healthcare journey.
 It analyzes medical records, prescriptions, diagnostic reports, and wellness data to provide meaningful insights.
 The platform uses AI and OCR to extract important information from uploaded medical documents.
 It converts complex medical terminology into easy-to-understand summaries and explanations.
