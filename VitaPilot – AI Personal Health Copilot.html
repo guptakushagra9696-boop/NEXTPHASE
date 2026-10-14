@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VitaPilot – AI Personal Health Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* ==========================================================
+   0. DESIGN TOKENS + BASE STYLES  (dark / black UI)
+   ========================================================== */
+:root{
+  color-scheme:dark;
+  --bg:#000; --panel:#0d0d10; --panel2:#15151a; --line:#26262e;
+  --text:#f2f2f5; --muted:#9a9aa8;
+  --pulse:#ff5a6e;      /* brand accent: heartbeat red-pink */
+  --pulse-soft:rgba(255,90,110,.14);
+  --ok:#4fd6b0; --warn:#ffc15a; --bad:#ff6b6b; --info:#7aa7ff;
+  --r-lg:22px; --r-md:14px; --r-sm:9px;
+  --display:'Bricolage Grotesque','Trebuchet MS',system-ui,sans-serif;
+  --body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--display);margin:0;line-height:1.15;letter-spacing:-.01em}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--pulse);outline-offset:2px}
+.muted{color:var(--muted)} .small{font-size:.86rem}
+.hide{display:none!important}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.grow{flex:1}
+.btn{border:0;border-radius:999px;padding:12px 22px;font-weight:700;background:var(--pulse);color:#16000a;transition:transform .12s,filter .12s}
+.btn:hover{filter:brightness(1.1)} .btn:active{transform:scale(.97)}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--pulse)}
+.btn.sm{padding:8px 15px;font-size:.88rem}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:.85rem;color:var(--muted)}
+.input{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;width:100%}
+.input:focus{border-color:var(--pulse);outline:none}
+.err{color:var(--bad);font-size:.88rem;min-height:1.2em;margin:-4px 0 10px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-size:.88rem;cursor:pointer;user-select:none}
+.chip.on{background:var(--pulse-soft);border-color:var(--pulse);color:#ffd2d8}
+.tag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.78rem;font-weight:700}
+.tag.normal{background:rgba(79,214,176,.15);color:var(--ok)}
+.tag.low{background:rgba(122,167,255,.16);color:var(--info)}
+.tag.high{background:rgba(255,107,107,.16);color:var(--bad)}
+
+/* ==========================================================
+   1. LOGIN / SIGN-UP PAGE STYLES
+   ========================================================== */
+#auth{min-height:100vh;display:grid;grid-template-columns:1.1fr 1fr}
+.auth-hero{padding:56px 6vw;display:flex;flex-direction:column;justify-content:center;gap:28px;border-right:1px solid var(--line);position:relative;overflow:hidden}
+.logo{font-family:var(--display);font-weight:800;font-size:1.5rem;display:flex;align-items:center;gap:10px}
+.logo i{width:14px;height:14px;border-radius:50%;background:var(--pulse);box-shadow:0 0 0 5px var(--pulse-soft);display:inline-block}
+.auth-hero h1{font-size:clamp(2.3rem,5vw,4rem);font-weight:800;max-width:14ch}
+.auth-hero p.lead{color:var(--muted);max-width:44ch;font-size:1.08rem}
+.ecg{width:100%;max-width:560px;height:110px}
+.ecg path{fill:none;stroke:var(--pulse);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:900;stroke-dashoffset:900;animation:beat 3.2s ease-out infinite}
+@keyframes beat{0%{stroke-dashoffset:900}60%,100%{stroke-dashoffset:0}}
+.feat-list{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;color:var(--muted);font-size:.95rem;max-width:460px}
+.feat-list span::before{content:"+ ";color:var(--pulse);font-weight:700}
+.auth-side{display:flex;align-items:center;justify-content:center;padding:32px 5vw}
+.auth-card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:30px}
+.auth-card h2{font-size:1.6rem;margin-bottom:6px}
+.tabs{display:flex;background:var(--panel2);border-radius:999px;padding:4px;margin-bottom:22px}
+.tabs button{flex:1;border:0;background:transparent;padding:9px;border-radius:999px;color:var(--muted);font-weight:700}
+.tabs button.on{background:var(--bg);color:var(--text)}
+.steps{display:flex;gap:6px;margin-bottom:20px}
+.steps b{height:4px;flex:1;border-radius:4px;background:var(--line)} .steps b.on{background:var(--pulse)}
+.code-box{letter-spacing:.5em;text-align:center;font-size:1.5rem;font-weight:700}
+@media(max-width:860px){#auth{grid-template-columns:1fr}.auth-hero{border-right:0;border-bottom:1px solid var(--line);padding:32px 6vw}.ecg{height:70px}.feat-list{display:none}}
+
+/* ==========================================================
+   2. APP SHELL + DASHBOARD STYLES
+   ========================================================== */
+#app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.side{border-right:1px solid var(--line);padding:22px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow:auto}
+.side .logo{margin:0 8px 22px}
+.nav{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:var(--r-md);background:transparent;border:0;color:var(--muted);text-align:left;width:100%;font-weight:500}
+.nav:hover{background:var(--panel2);color:var(--text)}
+.nav svg,.tile svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.main{padding:28px clamp(16px,3vw,40px) 60px;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:26px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);padding:8px 14px;border-radius:999px;font-size:.9rem;cursor:pointer}
+.pill b{color:var(--pulse)}
+.hello{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;margin-bottom:26px}
+.hello h1{font-size:clamp(1.9rem,4vw,3rem);font-weight:800}
+.hello .time{text-align:right}
+.hello .time .t{font-family:var(--display);font-size:clamp(2rem,4vw,3rem);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.grid{display:grid;gap:16px}
+.g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:1fr 1fr}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px}
+.card h3{font-size:1.08rem;margin-bottom:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;text-align:left;display:flex;flex-direction:column;gap:8px;transition:border-color .15s,transform .15s;width:100%}
+.tile:hover{border-color:var(--pulse);transform:translateY(-2px)}
+.tile .ic{width:38px;height:38px;border-radius:12px;background:var(--pulse-soft);color:var(--pulse);display:flex;align-items:center;justify-content:center}
+.tile strong{font-family:var(--display);font-size:1.05rem}
+.tile span.d{color:var(--muted);font-size:.88rem}
+.meter{height:10px;background:var(--panel2);border-radius:10px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--pulse);border-radius:10px;transition:width .4s}
+.big{font-family:var(--display);font-size:2.4rem;font-weight:800}
+@media(max-width:980px){#app{grid-template-columns:1fr}.side{display:none}.g3{grid-template-columns:1fr 1fr}.hello{grid-template-columns:1fr}.hello .time{text-align:left}}
+@media(max-width:560px){.g3,.g2{grid-template-columns:1fr}}
+
+/* ==========================================================
+   3. POP-UP (MODAL) STYLES – every option opens as a pop-up
+   ========================================================== */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);width:100%;max-width:640px;max-height:90vh;display:flex;flex-direction:column;animation:pop .22s ease-out}
+.sheet.wide{max-width:900px}
+@keyframes pop{from{transform:scale(.96) translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.sheet-h h2{font-size:1.25rem}
+.x{background:var(--panel2);border:0;border-radius:50%;width:34px;height:34px;font-size:1.1rem}
+.sheet-b{padding:22px;overflow:auto}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--pulse);padding:11px 20px;border-radius:999px;z-index:80;font-size:.92rem;max-width:92vw}
+
+/* ==========================================================
+   4. REPORTS / GRAPH / SUMMARY STYLES
+   ========================================================== */
+.drop{border:1.5px dashed var(--line);border-radius:var(--r-lg);padding:28px;text-align:center;cursor:pointer;transition:border-color .15s}
+.drop:hover,.drop.over{border-color:var(--pulse);background:var(--pulse-soft)}
+.gauge{display:grid;grid-template-columns:150px 1fr 110px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.gauge:last-child{border-bottom:0}
+.track{position:relative;height:10px;background:var(--panel2);border-radius:10px}
+.track .band{position:absolute;top:0;bottom:0;background:rgba(79,214,176,.3);border-radius:10px}
+.track .dot{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%);border:3px solid var(--bg)}
+.trend{width:100%;height:auto;display:block}
+.listrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.listrow:last-child{border-bottom:0}
+.vals{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+@media(max-width:560px){.gauge{grid-template-columns:1fr 1fr}.gauge .track{grid-column:1/-1;order:3}.vals{grid-template-columns:1fr}}
+
+/* ==========================================================
+   5. AI CHAT STYLES
+   ========================================================== */
+.chat{display:flex;flex-direction:column;height:min(62vh,560px)}
+.msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+.m{max-width:86%;padding:11px 15px;border-radius:18px;white-space:pre-wrap;font-size:.95rem}
+.m.ai{background:var(--panel2);border-bottom-left-radius:5px;align-self:flex-start}
+.m.me{background:var(--pulse);color:#16000a;border-bottom-right-radius:5px;align-self:flex-end;font-weight:500}
+.chat-in{display:flex;gap:10px;margin-top:12px}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+
+/* ==========================================================
+   6. PREMIUM PLAN STYLES
+   ========================================================== */
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.plan{border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;display:flex;flex-direction:column;gap:10px;background:var(--panel2)}
+.plan.best{border-color:var(--pulse);box-shadow:0 0 0 1px var(--pulse) inset}
+.plan .price{font-family:var(--display);font-size:2rem;font-weight:800}
+.plan ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px;font-size:.9rem;color:var(--muted);flex:1}
+.plan li::before{content:"✓ ";color:var(--ok)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.ecg path{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+
+<!-- ==========================================================
+     1. LOGIN / SIGN-UP PAGE  (email → verify code → password → health details)
+     ========================================================== -->
+<section id="auth" class="hide">
+  <div class="auth-hero">
+    <div class="logo"><i></i>VitaPilot</div>
+    <h1>Your health, with a copilot.</h1>
+    <p class="lead">Upload your reports, see them as graphs, chat with an AI for a first assessment, and never miss a medicine again.</p>
+    <svg class="ecg" viewBox="0 0 560 110" aria-hidden="true"><path d="M0 60 H120 L140 60 L158 18 L182 96 L202 36 L216 60 H330 L350 60 L368 8 L392 100 L412 40 L426 60 H560"/></svg>
+    <div class="feat-list"><span>Report graphs</span><span>AI health chat</span><span>Medicine reminders</span><span>Supplement tips</span><span>Report summaries</span><span>Premium plans</span></div>
+  </div>
+  <div class="auth-side"><div class="auth-card" id="authCard"></div></div>
+</section>
+
+<!-- ==========================================================
+     2. DASHBOARD  (greeting, live clock, credits, option tiles)
+     ========================================================== -->
+<section id="app" class="hide">
+  <aside class="side">
+    <div class="logo"><i></i>VitaPilot</div>
+    <div id="sideNav"></div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div class="small muted" id="today"></div>
+      <div class="row">
+        <button class="pill" data-act="open" data-panel="premium">Credits <b class="creditTxt"></b></button>
+        <button class="pill" data-act="open" data-panel="profile" id="avatarBtn"></button>
+      </div>
+    </div>
+    <div class="hello">
+      <div><p class="muted" id="greetSmall"></p><h1 id="greet"></h1></div>
+      <div class="time"><div class="t" id="clock"></div><div class="small muted">Local time</div></div>
+    </div>
+
+    <div class="grid g3" id="tiles"></div>
+
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card"><h3>Latest report at a glance</h3><div id="dashGauges"></div></div>
+      <div class="grid" style="align-content:start">
+        <div class="card">
+          <h3>AI credits</h3>
+          <div class="row" style="justify-content:space-between"><span class="big creditTxt"></span><button class="btn sm ghost" data-act="open" data-panel="premium">See premium</button></div>
+          <div class="meter" style="margin:12px 0 6px"><i id="dashMeter" style="width:0"></i></div>
+          <p class="small muted">Each AI chat message uses 5 credits. Free plan includes 100.</p>
+        </div>
+        <div class="card"><h3>Today's medicines</h3><div id="dashMeds"></div></div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- ==========================================================
+     3. POP-UP CONTAINER  (all panels render here)
+     ========================================================== -->
+<div id="modal" class="hide" role="dialog" aria-modal="true"></div>
+<div id="toast" class="hide"></div>
+<input type="file" id="pdfInput" accept="application/pdf" class="hide">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ==========================================================
+   JS-0. HELPERS, STORAGE, DATA
+   ========================================================== */
+const KEY='vitapilot_v1';
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let store={users:{},session:null};
+try{const r=localStorage.getItem(KEY);if(r)store=JSON.parse(r)}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}}
+const me=()=>store.users[store.session];
+const todayStr=()=>new Date().toISOString().slice(0,10);
+const pad=n=>String(n).padStart(2,'0');
+const fmtDate=d=>new Date(d+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+const hash=s=>btoa(unescape(encodeURIComponent('vp::'+s)));
+let toastT;
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.remove('hide');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.add('hide'),2800)}
+
+const METRICS={
+  hemoglobin:{label:'Hemoglobin',unit:'g/dL',lo:12,hi:17.5,alias:['hemoglobin','haemoglobin','hb']},
+  glucose:{label:'Fasting glucose',unit:'mg/dL',lo:70,hi:100,alias:['fasting glucose','fasting blood sugar','blood glucose','glucose','fbs']},
+  hba1c:{label:'HbA1c',unit:'%',lo:4,hi:5.7,alias:['hba1c','glycated hemoglobin','glycosylated hemoglobin']},
+  cholesterol:{label:'Total cholesterol',unit:'mg/dL',lo:100,hi:200,alias:['total cholesterol','cholesterol total','cholesterol']},
+  hdl:{label:'HDL (good)',unit:'mg/dL',lo:40,hi:100,alias:['hdl']},
+  ldl:{label:'LDL (bad)',unit:'mg/dL',lo:40,hi:100,alias:['ldl']},
+  triglycerides:{label:'Triglycerides',unit:'mg/dL',lo:40,hi:150,alias:['triglycerides','triglyceride']},
+  vitd:{label:'Vitamin D',unit:'ng/mL',lo:30,hi:100,alias:['vitamin d','25-oh vitamin d','25 hydroxy vitamin d']},
+  b12:{label:'Vitamin B12',unit:'pg/mL',lo:200,hi:900,alias:['vitamin b12','vitamin b-12','b12']},
+  tsh:{label:'TSH (thyroid)',unit:'mIU/L',lo:0.4,hi:4,alias:['tsh','thyroid stimulating hormone']},
+  creatinine:{label:'Creatinine',unit:'mg/dL',lo:0.6,hi:1.3,alias:['creatinine']},
+  wbc:{label:'WBC count',unit:'x10³/µL',lo:4,hi:11,alias:['wbc','white blood cell','total leucocyte count','tlc']},
+  platelets:{label:'Platelets',unit:'x10³/µL',lo:150,hi:450,alias:['platelets','platelet count']}
+};
+const PLANS={
+  free:{name:'Free',limit:100,price:0},
+  plus:{name:'Plus',limit:500,price:199},
+  pro:{name:'Pro',limit:Infinity,price:499},
+  family:{name:'Family',limit:Infinity,price:799}
+};
+const CREDIT_PER_MSG=5;
+const statusOf=(k,v)=>{const m=METRICS[k];return v<m.lo?'low':v>m.hi?'high':'normal'};
+const sortedReports=()=>[...(me().reports||[])].sort((a,b)=>a.date.localeCompare(b.date));
+const latest=()=>{const r=sortedReports();return r.length?r[r.length-1]:null};
+function flagged(){const l=latest();if(!l)return[];return Object.entries(l.values).map(([k,v])=>({k,v,s:statusOf(k,v),m:METRICS[k]})).filter(x=>x.s!=='normal')}
+const limitOf=()=>PLANS[me().plan||'free'].limit;
+const limTxt=()=>limitOf()===Infinity?'∞':limitOf();
+
+/* ==========================================================
+   JS-1. LOGIN / SIGN-UP LOGIC
+   Steps: email → verify code → set password → health details
+   NOTE: this demo has no mail server, so the "email" with the code
+   is shown in a pop-up inbox instead of being sent to a real address.
+   ========================================================== */
+let auth={mode:'signup',step:'email',email:'',code:'',codeAt:0,name:'',pass:''};
+const BLOOD=['A+','A-','B+','B-','AB+','AB-','O+','O-','Not sure'];
+const CONDS=['None','Diabetes','Hypertension','Asthma','Thyroid','High cholesterol','Heart condition','PCOS','Anaemia','Arthritis'];
+let chosenConds=new Set(['None']);
+
+function renderAuth(){
+  const c=$('#authCard');const a=auth;let h='';
+  const stepIdx={email:0,code:1,password:2,details:3}[a.step];
+  const bar=a.mode==='signup'?`<div class="steps">${[0,1,2,3].map(i=>`<b class="${i<=stepIdx?'on':''}"></b>`).join('')}</div>`:'';
+  const tabs=a.step==='email'||a.mode==='login'?`<div class="tabs"><button data-act="authMode" data-m="signup" class="${a.mode==='signup'?'on':''}">Create account</button><button data-act="authMode" data-m="login" class="${a.mode==='login'?'on':''}">Log in</button></div>`:'';
+  if(a.mode==='login'){
+    h=`${tabs}<h2>Welcome back</h2><p class="muted small" style="margin-bottom:18px">Log in with your email and password.</p>
+    <div class="field"><label>Email</label><input class="input" id="a_email" type="email" autocomplete="email" value="${esc(a.email)}"></div>
+    <div class="field"><label>Password</label><input class="input" id="a_pass" type="password" autocomplete="current-password"></div>
+    <div class="err" id="a_err"></div>
+    <button class="btn" style="width:100%" data-act="doLogin">Log in</button>
+    <p class="small muted" style="margin-top:14px;text-align:center">Forgot password? <a href="#" data-act="forgot" style="color:var(--pulse)">Reset with email code</a></p>`;
+  }else if(a.step==='email'){
+    h=`${bar}${tabs}<h2>${a.mode==='reset'?'Reset password':'Create your account'}</h2><p class="muted small" style="margin-bottom:18px">Enter your email. We'll send a 6-digit code to verify it.</p>
+    <div class="field"><label>Email</label><input class="input" id="a_email" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(a.email)}"></div>
+    <div class="err" id="a_err"></div><button class="btn" style="width:100%" data-act="sendCode">Send verification code</button>`;
+  }else if(a.step==='code'){
+    h=`${bar}<h2>Verify your email</h2><p class="muted small" style="margin-bottom:18px">We sent a 6-digit code to <b>${esc(a.email)}</b>. Enter it below. The code works for 10 minutes.</p>
+    <div class="field"><label>Verification code</label><input class="input code-box" id="a_code" inputmode="numeric" maxlength="6" placeholder="••••••"></div>
+    <div class="err" id="a_err"></div><button class="btn" style="width:100%" data-act="verifyCode">Verify email</button>
+    <div class="row" style="justify-content:space-between;margin-top:14px"><button class="btn ghost sm" data-act="resend">Send a new code</button><button class="btn ghost sm" data-act="showInbox">Open demo inbox</button></div>`;
+  }else if(a.step==='password'){
+    h=`${bar}<h2>${a.mode==='reset'?'Set a new password':'Set your password'}</h2><p class="muted small" style="margin-bottom:18px">Email verified. Choose a password with at least 8 characters.</p>
+    ${a.mode==='signup'?`<div class="field"><label>Your name</label><input class="input" id="a_name" autocomplete="name" value="${esc(a.name)}"></div>`:''}
+    <div class="field"><label>Password</label><input class="input" id="a_pass" type="password" autocomplete="new-password"></div>
+    <div class="field"><label>Confirm password</label><input class="input" id="a_pass2" type="password" autocomplete="new-password"></div>
+    <div class="err" id="a_err"></div><button class="btn" style="width:100%" data-act="setPass">${a.mode==='reset'?'Save new password':'Continue'}</button>`;
+  }else{
+    h=`${bar}<h2>A few health basics</h2><p class="muted small" style="margin-bottom:18px">This helps the AI give relevant guidance. You can change it later.</p>
+    <div class="field"><label>Blood group</label><select class="input" id="a_blood">${BLOOD.map(b=>`<option>${b}</option>`).join('')}</select></div>
+    <div class="field"><label>Age</label><input class="input" id="a_age" type="number" min="1" max="120" placeholder="e.g. 32"></div>
+    <div class="field"><label>Existing conditions</label><div class="row" style="gap:8px" id="a_conds">${CONDS.map(x=>`<span class="chip ${chosenConds.has(x)?'on':''}" data-act="cond" data-c="${x}">${x}</span>`).join('')}</div></div>
+    <div class="field"><label>Other condition (optional)</label><input class="input" id="a_other" placeholder="Type here"></div>
+    <div class="err" id="a_err"></div><button class="btn" style="width:100%" data-act="finishSignup">Start using VitaPilot</button>`;
+  }
+  c.innerHTML=h;
+  const f=c.querySelector('input,select');if(f&&a.step!=='details')f.focus();
+}
+function inboxModal(){
+  openModal({title:'Demo inbox',body:`<p class="muted small" style="margin-bottom:14px">This demo has no mail server, so your email arrives here instead.</p>
+  <div class="card" style="background:var(--panel2)"><p class="small muted">To: ${esc(auth.email)}<br>From: VitaPilot &lt;no-reply@vitapilot.app&gt;</p><hr style="border:0;border-top:1px solid var(--line);margin:12px 0">
+  <p>Your VitaPilot verification code is</p><p class="big" style="letter-spacing:.3em;color:var(--pulse);margin:8px 0">${auth.code}</p><p class="small muted">Valid for 10 minutes. If you didn't request this, ignore this email.</p></div>`});
+}
+function makeCode(){auth.code=String(Math.floor(100000+Math.random()*900000));auth.codeAt=Date.now();inboxModal()}
+
+/* ==========================================================
+   JS-2. PROFILE: GREETING + CLOCK
+   ========================================================== */
+function greeting(d=new Date()){
+  const h=d.getHours();
+  if(h>=5&&h<12)return'Good morning';
+  if(h>=12&&h<17)return'Good afternoon';
+  if(h>=17&&h<21)return'Good evening';
+  return'Good night';
+}
+function tick(){
+  const u=me();if(!u)return;const d=new Date();
+  $('#clock').textContent=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  $('#today').textContent=d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
+  $('#greet').textContent=`${greeting(d)}, ${u.name.split(' ')[0]}`;
+  const g=greeting(d);$('#greetSmall').textContent=g==='Good night'?'Rest well. Your health data is here when you need it.':'Here is your health overview for today.';
+  checkReminders(d);
+}
+
+/* ==========================================================
+   JS-3. DASHBOARD: TILES, GAUGES, CREDITS
+   ========================================================== */
+const ICONS={
+ upload:'<path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16"/>',
+ chart:'<path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/>',
+ chat:'<path d="M21 12a8 8 0 01-11.5 7.2L4 20l1-4.6A8 8 0 1121 12z"/>',
+ pill:'<rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-35 12 12)"/><path d="M9.5 9.5l5 5"/>',
+ leaf:'<path d="M5 19C5 9 11 4 20 4c0 9-5 15-15 15zM5 19l7-7"/>',
+ bell:'<path d="M18 16V11a6 6 0 10-12 0v5l-2 2h16zM10 21h4"/>',
+ doc:'<path d="M7 3h8l4 4v14H7zM14 3v5h5M10 13h6M10 17h6"/>',
+ star:'<path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.3l1.1-6.2L3 9.7l6.2-.9z"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'
+};
+const ic=n=>`<svg viewBox="0 0 24 24">${ICONS[n]}</svg>`;
+const PANELS=[
+ {id:'reports',icon:'upload',title:'Upload reports',desc:'Add a PDF and read the values'},
+ {id:'graph',icon:'chart',title:'Health graphs',desc:'Ranges and trends over time'},
+ {id:'chat',icon:'chat',title:'AI assessment',desc:'Chat about symptoms and results'},
+ {id:'meds',icon:'pill',title:'Medicines & reminders',desc:'Track doses, get timed alerts'},
+ {id:'supps',icon:'leaf',title:'Supplements',desc:'What your reports suggest'},
+ {id:'summary',icon:'doc',title:'Report summary',desc:'All your reports in one place'},
+ {id:'premium',icon:'star',title:'Premium plans',desc:'More credits and features'},
+ {id:'profile',icon:'user',title:'Profile',desc:'Blood group, age, conditions'}
+];
+function renderApp(){
+  const u=me();
+  $('#sideNav').innerHTML=PANELS.map(p=>`<button class="nav" data-act="open" data-panel="${p.id}">${ic(p.icon)}${p.title}</button>`).join('');
+  $('#tiles').innerHTML=PANELS.slice(0,6).map(p=>`<button class="tile" data-act="open" data-panel="${p.id}"><span class="ic">${ic(p.icon)}</span><strong>${p.title}</strong><span class="d">${p.desc}</span></button>`).join('');
+  $('#avatarBtn').innerHTML=`<span style="width:24px;height:24px;border-radius:50%;background:var(--pulse);color:#16000a;display:inline-flex;align-items:center;justify-content:center;font-weight:800">${esc(u.name[0].toUpperCase())}</span>${esc(u.name.split(' ')[0])}`;
+  refreshDash();tick();
+}
+function refreshDash(){
+  const u=me();if(!u)return;
+  const used=u.used||0,lim=limitOf();
+  document.querySelectorAll('.creditTxt').forEach(e=>e.textContent=`${used}/${limTxt()}`);
+  $('#dashMeter').style.width=(lim===Infinity?Math.min(used,100):Math.min(100,used/lim*100))+'%';
+  const l=latest();
+  $('#dashGauges').innerHTML=l?`<p class="small muted" style="margin-bottom:6px">${esc(l.name)} · ${fmtDate(l.date)}</p>`+gaugeRows(l.values,6)+`<button class="btn ghost sm" style="margin-top:12px" data-act="open" data-panel="graph">See all graphs</button>`:
+   `<p class="muted" style="margin-bottom:12px">No reports yet. Upload a PDF to see your values on a graph.</p><button class="btn sm" data-act="open" data-panel="reports">Upload a report</button>`;
+  const meds=(u.meds||[]).filter(m=>m.type==='med').sort((a,b)=>a.time.localeCompare(b.time));
+  $('#dashMeds').innerHTML=meds.length?meds.map(m=>medRow(m,true)).join(''):`<p class="muted small" style="margin-bottom:10px">No medicines added.</p><button class="btn sm ghost" data-act="open" data-panel="meds">Add a medicine</button>`;
+}
+function gaugeRows(values,max){
+  return Object.entries(values).slice(0,max||99).map(([k,v])=>{
+    const m=METRICS[k];if(!m)return'';const s=statusOf(k,v),span=m.hi-m.lo,mn=m.lo-span*.6,mx=m.hi+span*.6;
+    const pos=Math.max(2,Math.min(98,(v-mn)/(mx-mn)*100)),b1=(m.lo-mn)/(mx-mn)*100,b2=(m.hi-mn)/(mx-mn)*100;
+    const col=s==='normal'?'var(--ok)':s==='low'?'var(--info)':'var(--bad)';
+    return`<div class="gauge"><div><b>${m.label}</b></div><div class="track"><div class="band" style="left:${b1}%;width:${b2-b1}%"></div><div class="dot" style="left:${pos}%;background:${col}"></div></div><div style="text-align:right">${v} <span class="muted small">${m.unit}</span> <span class="tag ${s}">${s}</span></div></div>`;
+  }).join('');
+}
+
+/* ==========================================================
+   JS-4. POP-UP ENGINE + PANEL ROUTER
+   ========================================================== */
+let panelState={};
+function openModal({title,body,wide,onMount}){
+  const m=$('#modal');
+  m.innerHTML=`<div class="sheet ${wide?'wide':''}"><div class="sheet-h"><h2>${title}</h2><button class="x" data-act="close" aria-label="Close">✕</button></div><div class="sheet-b">${body}</div></div>`;
+  m.classList.remove('hide');document.body.style.overflow='hidden';
+  if(onMount)onMount(m);
+}
+function closeModal(){$('#modal').classList.add('hide');$('#modal').innerHTML='';document.body.style.overflow=''}
+function openPanel(id){
+  const fn={reports:panelReports,graph:panelGraph,chat:panelChat,meds:panelMeds,supps:panelSupps,summary:panelSummary,premium:panelPremium,profile:panelProfile}[id];
+  if(fn)fn();
+}
+
+/* ==========================================================
+   JS-5. REPORTS: PDF UPLOAD + VALUE EXTRACTION
+   ========================================================== */
+function panelReports(){
+  const rs=sortedReports().reverse();
+  openModal({title:'Upload reports',wide:true,body:`
+   <div class="drop" id="dropZone" data-act="pickPdf"><b>Drop a lab report PDF here, or tap to choose</b><p class="small muted" style="margin-top:6px">Text-based PDFs work best. You can check and correct every value before saving.</p></div>
+   <div class="row" style="margin-top:12px"><button class="btn ghost sm" data-act="manualReport">Enter values by hand</button><button class="btn ghost sm" data-act="sampleReports">Load sample reports</button></div>
+   <h3 style="margin:24px 0 6px">Saved reports</h3>
+   ${rs.length?rs.map(r=>`<div class="listrow"><div><b>${esc(r.name)}</b><div class="small muted">${fmtDate(r.date)} · ${Object.keys(r.values).length} values</div></div><div class="row"><button class="btn ghost sm" data-act="viewGraphFor" data-id="${r.id}">View</button><button class="btn ghost sm" data-act="delReport" data-id="${r.id}">Delete</button></div></div>`).join(''):'<p class="muted">No reports saved yet.</p>'}`,
+   onMount:()=>{const z=$('#dropZone');
+    ['dragover','dragenter'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.add('over')}));
+    ['dragleave','drop'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.remove('over')}));
+    z.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)handlePdf(f)})}});
+}
+async function handlePdf(file){
+  if(!/pdf$/i.test(file.type)&&!/\.pdf$/i.test(file.name)){toast('Please choose a PDF file');return}
+  openModal({title:'Reading your report',body:`<p class="muted">Extracting values from <b>${esc(file.name)}</b>…</p>`});
+  let text='',ok=true;
+  try{
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    for(let i=1;i<=Math.min(pdf.numPages,15);i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();text+=c.items.map(x=>x.str).join(' ')+'\n'}
+  }catch(e){ok=false}
+  const found=ok?extractValues(text):{};
+  reviewReport(file.name.replace(/\.pdf$/i,''),found,ok?(Object.keys(found).length?'':'We read the PDF but found no known lab values. Enter them below.'):'We could not read this PDF (it may be a scan). Enter the values below.');
+}
+function extractValues(t){
+  const out={};
+  for(const [k,m] of Object.entries(METRICS)){
+    for(const a of m.alias){
+      const re=new RegExp('(?:^|[^a-z0-9])'+a.replace(/[-\s]/g,'[-\\s]?')+'(?![a-z0-9])[^0-9]{0,40}?(\\d+(?:\\.\\d+)?)','i');
+      const r=re.exec(t);if(r){const v=parseFloat(r[1]);if(isFinite(v)){out[k]=v;break}}
+    }
+  }
+  return out;
+}
+function reviewReport(name,found,note){
+  openModal({title:'Check the values',wide:true,body:`${note?`<p class="small" style="color:var(--warn);margin-bottom:12px">${note}</p>`:'<p class="small muted" style="margin-bottom:12px">Please check the values below. Fix anything that looks wrong, or leave a field empty to skip it.</p>'}
+   <div class="row" style="margin-bottom:16px"><div class="field grow" style="margin:0"><label>Report name</label><input class="input" id="r_name" value="${esc(name)}"></div><div class="field" style="margin:0"><label>Report date</label><input class="input" type="date" id="r_date" value="${todayStr()}"></div></div>
+   <div class="vals">${Object.entries(METRICS).map(([k,m])=>`<div class="field" style="margin:0"><label>${m.label} (${m.unit}) · normal ${m.lo}–${m.hi}</label><input class="input r_v" data-k="${k}" type="number" step="any" value="${found[k]??''}"></div>`).join('')}</div>
+   <div class="err" id="r_err" style="margin-top:12px"></div><button class="btn" data-act="saveReport">Save report</button>`});
+}
+function addReport(name,date,values){
+  const u=me();u.reports=u.reports||[];u.reports.push({id:'r'+Date.now()+Math.floor(Math.random()*999),name,date,values});save();refreshDash();
+}
+function loadSamples(){
+  const d=n=>{const x=new Date();x.setDate(x.getDate()-n);return x.toISOString().slice(0,10)};
+  addReport('Full body checkup (sample)',d(120),{hemoglobin:11.2,glucose:118,hba1c:6.1,cholesterol:224,hdl:38,ldl:142,triglycerides:178,vitd:18,b12:190,tsh:3.1,creatinine:.9,wbc:7.2,platelets:260});
+  addReport('Follow-up panel (sample)',d(60),{hemoglobin:11.8,glucose:112,hba1c:6,cholesterol:218,hdl:40,ldl:136,triglycerides:170,vitd:22,b12:205,tsh:3.3,creatinine:.9,wbc:7.0,platelets:255});
+  addReport('Latest checkup (sample)',d(5),{hemoglobin:12.4,glucose:104,hba1c:5.8,cholesterol:208,hdl:42,ldl:128,triglycerides:158,vitd:27,b12:240,tsh:3.4,creatinine:.9,wbc:6.9,platelets:262});
+}
+
+/* ==========================================================
+   JS-6. HEALTH GRAPHS (range gauges + trend line)
+   ========================================================== */
+function panelGraph(selId){
+  const rs=sortedReports();
+  if(!rs.length){openModal({title:'Health graphs',body:`<p class="muted" style="margin-bottom:14px">Upload a report first and your graphs will appear here.</p><button class="btn" data-act="open" data-panel="reports">Upload a report</button>`});return}
+  const r=rs.find(x=>x.id===selId)||rs[rs.length-1];
+  const keys=[...new Set(rs.flatMap(x=>Object.keys(x.values)))];
+  panelState.metric=panelState.metric&&keys.includes(panelState.metric)?panelState.metric:keys[0];
+  openModal({title:'Health graphs',wide:true,body:`
+   <div class="field"><label>Report</label><select class="input" id="g_rep">${[...rs].reverse().map(x=>`<option value="${x.id}" ${x.id===r.id?'selected':''}>${esc(x.name)} · ${fmtDate(x.date)}</option>`).join('')}</select></div>
+   <h3 style="margin:6px 0">Where each value sits</h3><p class="small muted">The green band is the normal range. The dot is your value.</p>${gaugeRows(r.values)}
+   <h3 style="margin:26px 0 10px">Trend over time</h3>
+   <div class="field"><select class="input" id="g_met">${keys.map(k=>`<option value="${k}" ${k===panelState.metric?'selected':''}>${METRICS[k].label}</option>`).join('')}</select></div>
+   <div id="trendBox">${trendSvg(panelState.metric)}</div>`,
+   onMount:()=>{$('#g_rep').onchange=e=>panelGraph(e.target.value);$('#g_met').onchange=e=>{panelState.metric=e.target.value;$('#trendBox').innerHTML=trendSvg(e.target.value)}}});
+}
+function trendSvg(k){
+  const m=METRICS[k];
+  const pts=sortedReports().filter(r=>r.values[k]!=null).map(r=>({d:r.date,v:r.values[k]}));
+  if(!pts.length)return'<p class="muted">No data for this value yet.</p>';
+  const W=600,H=240,P={l:48,r:20,t:16,b:34};
+  const vs=pts.map(p=>p.v).concat([m.lo,m.hi]);let mn=Math.min(...vs),mx=Math.max(...vs);const pd=(mx-mn)*.15||1;mn-=pd;mx+=pd;
+  const x=i=>P.l+(pts.length===1?(W-P.l-P.r)/2:i*(W-P.l-P.r)/(pts.length-1));
+  const y=v=>P.t+(mx-v)*(H-P.t-P.b)/(mx-mn);
+  const line=pts.map((p,i)=>`${x(i)},${y(p.v)}`).join(' ');
+  return`<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="${m.label} trend">
+   <rect x="${P.l}" y="${y(m.hi)}" width="${W-P.l-P.r}" height="${y(m.lo)-y(m.hi)}" fill="rgba(79,214,176,.16)"/>
+   <text x="${P.l-6}" y="${y(m.hi)+4}" fill="#9a9aa8" font-size="11" text-anchor="end">${m.hi}</text>
+   <text x="${P.l-6}" y="${y(m.lo)+4}" fill="#9a9aa8" font-size="11" text-anchor="end">${m.lo}</text>
+   <polyline points="${line}" fill="none" stroke="#ff5a6e" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+   ${pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.v)}" r="5" fill="#000" stroke="#ff5a6e" stroke-width="3"><title>${p.v} ${m.unit} on ${fmtDate(p.d)}</title></circle><text x="${x(i)}" y="${y(p.v)-12}" fill="#f2f2f5" font-size="12" text-anchor="middle" font-weight="700">${p.v}</text><text x="${x(i)}" y="${H-10}" fill="#9a9aa8" font-size="11" text-anchor="middle">${new Date(p.d+'T00:00:00').toLocaleDateString(undefined,{day:'numeric',month:'short'})}</text>`).join('')}
+  </svg><p class="small muted">${m.label} in ${m.unit}. Green band = normal range (${m.lo}–${m.hi}).${pts.length<2?' Add more reports to see a trend line.':''}</p>`;
+}
+
+/* ==========================================================
+   JS-7. AI CHAT ASSESSMENT + CREDITS
+   Runs on-device with rule-based guidance (no data leaves this page).
+   ========================================================== */
+const TOPICS=[
+ {re:/head ?ache|migraine/,r:()=>"A headache is often linked to dehydration, poor sleep, eye strain or stress.\n\nTry: a glass or two of water, rest in a dim quiet room, and a short break from screens. Plain paracetamol can help if it is safe for you.\n\nSee a doctor soon if it is sudden and severe, follows a head injury, or comes with fever, stiff neck, confusion or vision changes."},
+ {re:/fever|temperature|chills/,r:()=>"Fever usually means your body is fighting an infection.\n\nTry: fluids, rest and light food. Paracetamol can lower the temperature and ease aches.\n\nSee a doctor if it lasts more than 3 days, goes above 39.5°C (103°F), or comes with a rash, breathing trouble or severe pain."},
+ {re:/cough|cold|sore throat|runny nose|congestion/,r:()=>"This sounds like a common cold or throat irritation.\n\nTry: warm fluids, steam inhalation, honey with warm water (not for children under 1), and rest.\n\nSee a doctor if the cough lasts over 2 weeks, you wheeze, cough up blood, or have a high fever."},
+ {re:/stomach|acidity|gas|nausea|vomit|diarrh|constipat|bloat/,r:()=>"Stomach upsets often come from food, infection, acidity or stress.\n\nTry: small light meals, ORS or plenty of fluids, and avoid spicy or oily food for a day or two.\n\nSee a doctor if there is blood in stool or vomit, severe pain, signs of dehydration, or it lasts more than 2 days."},
+ {re:/tired|fatigue|weak|exhaust|low energy/,r:()=>{const f=flagged().filter(x=>['hemoglobin','vitd','b12','tsh','glucose'].includes(x.k));return"Ongoing tiredness has many causes: poor sleep, low iron, low vitamin D or B12, thyroid issues, stress or high sugar."+(f.length?`\n\nYour latest report shows: ${f.map(x=>`${x.m.label} ${x.s}`).join(', ')}. These could contribute, so discuss them with your doctor.`:"\n\nA blood test for haemoglobin, vitamin D, B12, thyroid and sugar can help find the cause.")+"\n\nTry: 7–8 hours of sleep, regular meals, daily light exercise and good hydration."}},
+ {re:/sleep|insomnia|can'?t sleep/,r:()=>"For better sleep: keep fixed sleep and wake times, avoid caffeine after noon, keep screens away for an hour before bed, and keep the room dark and cool.\n\nSee a doctor if poor sleep lasts over 3 weeks or you snore loudly and wake unrefreshed."},
+ {re:/sugar|diabet|glucose|hba1c/,r:()=>{const l=latest();const g=l&&l.values.glucose,h=l&&l.values.hba1c;return"Blood sugar is managed through food, movement, sleep and, when needed, medicine."+(g||h?`\n\nYour latest: ${g?`fasting glucose ${g} mg/dL`:''}${g&&h?', ':''}${h?`HbA1c ${h}%`:''}.`:"")+"\n\nHelpful habits: pick whole grains and fibre, cut sugary drinks, walk 10–15 minutes after meals, and check levels as your doctor advises."}},
+ {re:/blood pressure|\bbp\b|hypertension/,r:()=>"Healthy blood pressure is usually below 120/80 mmHg.\n\nHelpful habits: less salt, regular walking, healthy weight, limited alcohol, and no smoking. Take BP medicines exactly as prescribed.\n\nSee a doctor urgently if readings are above 180/120 with headache, chest pain or vision changes."},
+ {re:/cholesterol|ldl|hdl|triglycer/,r:()=>"To improve cholesterol: choose oats, nuts, fruit, vegetables and fish; cut fried food and trans fats; exercise 150 minutes a week. Your doctor may advise medicine if levels stay high."},
+ {re:/anxi|stress|panic|depress|sad|low mood/,r:()=>"I'm sorry you're feeling this way. Slow breathing (inhale 4 seconds, exhale 6) for a few minutes can calm your body. Regular sleep, movement and talking to someone you trust also help.\n\nIf these feelings last for weeks or affect daily life, please talk to a doctor or counsellor. If you ever think about harming yourself, contact local emergency services or a crisis line right away."},
+ {re:/back pain|neck pain|joint|knee|muscle/,r:()=>"Muscle and joint pain often improves with gentle movement, heat or cold packs, good posture and stretching.\n\nSee a doctor if there is numbness, weakness, pain after a fall, or pain that wakes you at night."},
+ {re:/weight|diet|obes|lose fat/,r:()=>"Steady weight loss of 0.25–0.5 kg per week is safer. Fill half your plate with vegetables, include protein at each meal, limit sugary drinks, sleep well and walk daily."},
+ {re:/dizz|giddy|light ?headed/,r:()=>"Dizziness can come from dehydration, low blood sugar, low blood pressure or low haemoglobin. Sit down, drink water and eat something. See a doctor if it keeps happening or comes with fainting."},
+ {re:/report|result|blood test|summary/,r:()=>{const f=flagged();return f.length?"From your latest report, these values are outside the usual range:\n"+f.map(x=>`• ${x.m.label}: ${x.v} ${x.m.unit} (${x.s}; normal ${x.m.lo}–${x.m.hi})`).join('\n')+"\n\nOpen Report summary for details and ask me about any value.":"Your latest report looks within normal ranges, or no report is saved yet. Upload one so I can look closer."}}
+];
+const URGENT=/chest pain|can'?t breathe|cannot breathe|short(ness)? of breath|faint|unconscious|seizure|stroke|face droop|slurred|heavy bleeding|suicid|overdose/;
+function aiReply(q){
+  const t=q.toLowerCase(),u=me();
+  if(URGENT.test(t))return"⚠️ What you describe can be an emergency. Please call your local emergency number or go to the nearest hospital now. Don't wait for an online answer.";
+  const hit=TOPICS.find(x=>x.re.test(t));
+  let out=hit?hit.r():"Thanks for sharing. To assess this better, tell me:\n• When did it start?\n• How severe is it (1–10)?\n• Any fever, pain, or other symptoms?\n• Are you taking any medicine?\n\nYou can also ask about your reports, sugar, blood pressure, sleep or diet.";
+  const conds=(u.conditions||[]).filter(c=>c!=='None');
+  if(hit&&conds.length)out+=`\n\nNote: you listed ${conds.join(', ')}, so check with your doctor before trying new medicines.`;
+  return out+"\n\nThis is general guidance, not a diagnosis.";
+}
+function panelChat(){
+  const u=me();u.chat=u.chat||[];
+  if(!u.chat.length)u.chat.push({w:'ai',t:`Hi ${u.name.split(' ')[0]}, I'm your health copilot. Describe a symptom or ask about your reports and I'll give a first assessment.`});
+  openModal({title:'AI health assessment',wide:true,body:`
+   <div class="row" style="justify-content:space-between;margin-bottom:10px"><span class="small muted">Credits used</span><b class="creditTxt" style="color:var(--pulse)"></b></div>
+   <div class="meter" style="margin-bottom:14px"><i id="chatMeter" style="width:0"></i></div>
+   <div class="chat"><div class="msgs" id="msgs">${u.chat.map(m=>`<div class="m ${m.w}">${esc(m.t)}</div>`).join('')}</div>
+   <div class="quick">${['I have a headache','I feel tired all the time','Explain my report','How to lower blood sugar?'].map(s=>`<span class="chip" data-act="quick" data-q="${esc(s)}">${s}</span>`).join('')}</div>
+   <div class="chat-in"><input class="input" id="chatIn" placeholder="Describe how you feel…" autocomplete="off"><button class="btn" data-act="send">Send</button></div>
+   <p class="small muted" style="margin-top:8px">${CREDIT_PER_MSG} credits per message. Not a replacement for a doctor.</p></div>`,
+   onMount:()=>{const m=$('#msgs');m.scrollTop=m.scrollHeight;$('#chatIn').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});refreshDash();updChatMeter()}});
+}
+function updChatMeter(){const e=$('#chatMeter');if(!e)return;const u=me(),l=limitOf();e.style.width=(l===Infinity?Math.min(u.used||0,100):Math.min(100,(u.used||0)/l*100))+'%'}
+function sendChat(text){
+  const u=me(),inp=$('#chatIn');const q=(text||inp.value).trim();if(!q)return;
+  if((u.used||0)+CREDIT_PER_MSG>limitOf()){
+    const box=$('#msgs');box.insertAdjacentHTML('beforeend',`<div class="m ai">You've used all ${limTxt()} credits on the ${PLANS[u.plan||'free'].name} plan. Upgrade to premium to keep chatting.<br><br><button class="btn sm" data-act="open" data-panel="premium">See premium plans</button></div>`);box.scrollTop=box.scrollHeight;return}
+  inp.value='';u.chat.push({w:'me',t:q});u.used=(u.used||0)+CREDIT_PER_MSG;
+  const box=$('#msgs');box.insertAdjacentHTML('beforeend',`<div class="m me">${esc(q)}</div><div class="m ai" id="typing">Thinking…</div>`);box.scrollTop=box.scrollHeight;
+  refreshDash();updChatMeter();
+  setTimeout(()=>{const r=aiReply(q);u.chat.push({w:'ai',t:r});save();const tp=$('#typing');if(tp){tp.removeAttribute('id');tp.textContent=r}
+    const left=limitOf()-u.used;if(limitOf()!==Infinity&&left<=20&&left>0)box.insertAdjacentHTML('beforeend',`<div class="m ai small">Only ${left} credits left. <a href="#" data-act="open" data-panel="premium" style="color:var(--pulse)">Go premium</a> for more.</div>`);
+    if(limitOf()!==Infinity&&left<=0)box.insertAdjacentHTML('beforeend',`<div class="m ai">You've reached ${limTxt()}/${limTxt()} credits.<br><br><button class="btn sm" data-act="open" data-panel="premium">Unlock premium</button></div>`);
+    box.scrollTop=box.scrollHeight},650);
+  save();
+}
+
+/* ==========================================================
+   JS-8. MEDICINES + REMINDERS
+   ========================================================== */
+const MED_INFO=[
+ {re:/diabet|sugar/,t:'Diabetes',n:'Doctors commonly use metformin or similar medicines, with diet and exercise. Never start or change doses without your doctor.'},
+ {re:/hypertens|blood pressure|\bbp\b/,t:'Hypertension',n:'Common options include amlodipine, ACE inhibitors or ARBs. Take them at the same time daily and check BP at home.'},
+ {re:/asthma/,t:'Asthma',n:'A quick-relief inhaler for attacks and, if advised, a daily controller inhaler. Keep the reliever with you.'},
+ {re:/thyroid/,t:'Thyroid',n:'Levothyroxine is commonly taken on an empty stomach, 30–60 minutes before breakfast, with a TSH check every 6–12 months.'},
+ {re:/cholesterol|lipid/,t:'High cholesterol',n:'Statins are commonly prescribed when diet is not enough. Your doctor decides based on your overall heart risk.'},
+ {re:/heart|cardiac/,t:'Heart condition',n:'Heart medicines are very specific. Take them exactly as prescribed and never stop suddenly.'},
+ {re:/anaemia|anemia/,t:'Anaemia',n:'Iron tablets are commonly used. Take them with vitamin C and away from tea, coffee and milk.'},
+ {re:/arthritis/,t:'Arthritis',n:'Pain relievers and disease-specific medicines may be used. Long-term painkillers need medical supervision.'}
+];
+const medRow=(m,mini)=>{const done=(m.taken||{})[todayStr()];return`<div class="listrow"><label class="row" style="gap:10px;cursor:pointer"><input type="checkbox" ${done?'checked':''} data-act="takeMed" data-id="${m.id}" style="width:20px;height:20px;accent-color:#ff5a6e"><span><b ${done?'style="text-decoration:line-through;opacity:.6"':''}>${esc(m.name)}</b><span class="small muted"> ${esc(m.dose||'')}</span></span></label><span class="tag normal" style="background:var(--pulse-soft);color:var(--pulse)">${m.time}</span></div>`};
+function panelMeds(){
+  const u=me();u.meds=u.meds||[];
+  const meds=u.meds.filter(m=>m.type==='med').sort((a,b)=>a.time.localeCompare(b.time));
+  const conds=(u.conditions||[]).join(' ').toLowerCase();
+  const hints=MED_INFO.filter(x=>x.re.test(conds)||flagged().some(f=>(x.t==='Anaemia'&&f.k==='hemoglobin'&&f.s==='low')||(x.t==='High cholesterol'&&f.k==='ldl'&&f.s==='high')));
+  openModal({title:'Medicines & reminders',wide:true,body:`
+   <h3 style="margin-bottom:10px">Add a medicine</h3>
+   <div class="row" style="align-items:flex-end"><div class="field grow" style="margin:0;min-width:160px"><label>Medicine name</label><input class="input" id="md_name" placeholder="e.g. Metformin"></div>
+   <div class="field" style="margin:0;width:130px"><label>Dose</label><input class="input" id="md_dose" placeholder="500 mg"></div>
+   <div class="field" style="margin:0"><label>Reminder time</label><input class="input" id="md_time" type="time" value="08:00"></div>
+   <button class="btn" data-act="addMed">Add</button></div>
+   <div class="row" style="margin:12px 0 4px"><button class="btn ghost sm" data-act="notifPerm">Allow browser notifications</button><span class="small muted">Reminders pop up while this page is open.</span></div>
+   <h3 style="margin:22px 0 4px">Your medicines</h3>
+   ${meds.length?meds.map(m=>`<div class="listrow"><div><b>${esc(m.name)}</b> <span class="muted small">${esc(m.dose||'')}</span><div class="small muted">Daily at ${m.time}</div></div><div class="row"><label class="small muted row" style="gap:6px"><input type="checkbox" ${(m.taken||{})[todayStr()]?'checked':''} data-act="takeMed" data-id="${m.id}" style="accent-color:#ff5a6e"> Taken today</label><button class="btn ghost sm" data-act="delMed" data-id="${m.id}">Remove</button></div></div>`).join(''):'<p class="muted">No medicines yet.</p>'}
+   <h3 style="margin:24px 0 8px">Medicines to discuss with your doctor</h3>
+   ${hints.length?hints.map(h=>`<div class="card" style="background:var(--panel2);margin-bottom:10px"><b>${h.t}</b><p class="small muted" style="margin-top:4px">${h.n}</p></div>`).join(''):`<p class="muted small">Add your conditions in Profile or upload a report to see tailored information. For everyday aches and fever, plain paracetamol is commonly used when safe for you.</p>`}
+   <p class="small muted" style="margin-top:12px">General information only. Only a doctor can prescribe or change medicines.</p>`});
+}
+function addMed(type,name,dose,time){
+  const u=me();u.meds=u.meds||[];u.meds.push({id:'m'+Date.now()+Math.floor(Math.random()*99),type,name,dose,time,taken:{},lastAlert:''});save();refreshDash();
+}
+let ringing=false;
+function checkReminders(d){
+  const u=me();if(!u||!u.meds)return;const hm=pad(d.getHours())+':'+pad(d.getMinutes()),key=todayStr()+' '+hm;
+  const due=u.meds.find(m=>m.time===hm&&m.lastAlert!==key&&!(m.taken||{})[todayStr()]);
+  if(due&&!ringing){due.lastAlert=key;save();ringing=true;beep();
+    try{if('Notification' in window&&Notification.permission==='granted')new Notification('Time for '+due.name,{body:due.dose||'Daily reminder'})}catch(e){}
+    openModal({title:'⏰ Reminder',body:`<p class="big" style="font-size:1.6rem">Time to take ${esc(due.name)}</p><p class="muted" style="margin:6px 0 18px">${esc(due.dose||'')} · scheduled ${due.time}</p><div class="row"><button class="btn" data-act="doneMed" data-id="${due.id}">I took it</button><button class="btn ghost" data-act="snooze" data-id="${due.id}">Remind me in 5 min</button></div>`})}
+}
+function beep(){try{const c=new (window.AudioContext||window.webkitAudioContext)();[0,.25,.5].forEach(t=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.value=.15;o.connect(g);g.connect(c.destination);o.start(c.currentTime+t);o.stop(c.currentTime+t+.15)})}catch(e){}}
+
+/* ==========================================================
+   JS-9. SUPPLEMENTS (based on reports + profile)
+   ========================================================== */
+function suppList(){
+  const u=me(),l=latest(),v=l?l.values:{},age=+u.age||0,conds=(u.conditions||[]).join(' ').toLowerCase(),out=[];
+  const add=(name,why,how)=>out.push({name,why,how});
+  if(v.vitd!=null&&v.vitd<30)add('Vitamin D3',`Your vitamin D is ${v.vitd} ng/mL (normal 30–100).`,'Often 1000–2000 IU daily with a fatty meal. If very low, your doctor may prescribe a higher weekly dose.');
+  if(v.b12!=null&&v.b12<200)add('Vitamin B12',`Your B12 is ${v.b12} pg/mL (normal 200–900).`,'Often 500–1000 mcg daily. Common in vegetarians and people on metformin.');
+  if(v.hemoglobin!=null&&v.hemoglobin<12)add('Iron with vitamin C',`Your haemoglobin is ${v.hemoglobin} g/dL (normal 12–17.5).`,'Take on an empty stomach or with citrus, away from tea, coffee and milk. Confirm iron deficiency with your doctor first.');
+  if((v.triglycerides>150)||(v.ldl>100))add('Omega-3 (fish oil)','Your triglycerides or LDL are above the usual range.','Often about 1 g EPA+DHA daily with food. Check with your doctor if you take blood thinners.');
+  if(v.glucose>100||v.hba1c>5.7)add('Soluble fibre (psyllium husk)','Your sugar markers are above the usual range.','Often 1 teaspoon in water before a main meal, with plenty of fluids.');
+  if(v.tsh>4)add('Selenium-rich foods','Your TSH is above the usual range.','Brazil nuts (1–2 a day) or fish. Avoid iodine or biotin supplements until you speak to your doctor.');
+  if(age>=50)add('Calcium + vitamin D','Bone density drops with age.','Aim for about 1000–1200 mg calcium per day from food plus supplement, if needed.');
+  if(/diabet/.test(conds))add('Magnesium (diet first)','Magnesium intake is often low in people with diabetes.','Leafy greens, nuts and seeds. Ask your doctor before supplements if you have kidney problems.');
+  if(!out.length)add('Daily basics','No gaps found'+(l?' in your latest report.':'. Upload a report for tailored tips.'),'A balanced diet, 2–3 L of water, sunlight for 15–20 minutes and a daily walk cover most needs. A multivitamin is optional.');
+  return out;
+}
+function panelSupps(){
+  const list=suppList();
+  openModal({title:'Supplements you may need',wide:true,body:`<p class="muted small" style="margin-bottom:14px">Based on your latest report${latest()?` (${esc(latest().name)})`:''}, age and conditions.</p>
+   ${list.map((s,i)=>`<div class="card" style="background:var(--panel2);margin-bottom:12px"><div class="row" style="justify-content:space-between"><h3 style="margin:0">${s.name}</h3>${s.name!=='Daily basics'?`<button class="btn sm" data-act="addSupp" data-i="${i}">Add daily reminder</button>`:''}</div><p style="margin:8px 0 4px">${s.why}</p><p class="small muted">${s.how}</p></div>`).join('')}
+   <h3 style="margin:20px 0 8px">Your supplement reminders</h3>
+   ${(me().meds||[]).filter(m=>m.type==='supp').map(m=>`<div class="listrow"><div><b>${esc(m.name)}</b><div class="small muted">Daily at ${m.time}</div></div><button class="btn ghost sm" data-act="delMed" data-id="${m.id}" data-back="supps">Remove</button></div>`).join('')||'<p class="muted small">None yet.</p>'}
+   <p class="small muted" style="margin-top:14px">Doses are typical ranges, not prescriptions. Confirm with your doctor or pharmacist.</p>`});
+}
+
+/* ==========================================================
+   JS-10. REPORT SUMMARY
+   ========================================================== */
+function panelSummary(){
+  const rs=sortedReports(),l=latest();
+  if(!l){openModal({title:'Report summary',body:`<p class="muted" style="margin-bottom:14px">No reports to summarise yet.</p><button class="btn" data-act="open" data-panel="reports">Upload a report</button>`});return}
+  const vals=Object.entries(l.values).map(([k,v])=>({k,v,s:statusOf(k,v),m:METRICS[k]}));
+  const bad=vals.filter(x=>x.s!=='normal'),ok=vals.length-bad.length;
+  const prev=rs.length>1?rs[rs.length-2]:null;
+  const changes=prev?vals.filter(x=>prev.values[x.k]!=null&&prev.values[x.k]!==x.v).map(x=>{const p=prev.values[x.k],d=x.v-p;const better=x.s==='normal'||Math.abs(x.v-(x.m.lo+x.m.hi)/2)<Math.abs(p-(x.m.lo+x.m.hi)/2);return`<div class="listrow"><span>${x.m.label}</span><span>${p} → <b>${x.v}</b> ${x.m.unit} <span class="tag ${better?'normal':'high'}">${better?'closer to normal':'moving away'}</span></span></div>`}).join(''):'';
+  openModal({title:'Report summary',wide:true,body:`
+   <div class="grid g3" style="margin-bottom:18px"><div class="card"><div class="big">${rs.length}</div><p class="small muted">reports saved</p></div><div class="card"><div class="big" style="color:var(--ok)">${ok}</div><p class="small muted">values in range</p></div><div class="card"><div class="big" style="color:${bad.length?'var(--bad)':'var(--ok)'}">${bad.length}</div><p class="small muted">need attention</p></div></div>
+   <div class="card" style="background:var(--panel2);margin-bottom:18px"><h3>In plain words</h3><p>${bad.length?`In <b>${esc(l.name)}</b> (${fmtDate(l.date)}), ${bad.length} of ${vals.length} values are outside the usual range: ${bad.map(x=>`${x.m.label} is ${x.s} (${x.v} ${x.m.unit})`).join('; ')}.`:`In <b>${esc(l.name)}</b> (${fmtDate(l.date)}), all ${vals.length} values are in the usual range. Keep up your current habits.`}</p>
+   ${bad.length?`<p class="small muted" style="margin-top:8px">Please share these results with your doctor. See the Supplements and AI assessment sections for next steps.</p>`:''}</div>
+   ${changes?`<h3 style="margin-bottom:6px">Change since previous report</h3>${changes}`:''}
+   <h3 style="margin:22px 0 6px">All reports</h3>
+   ${[...rs].reverse().map(r=>{const b=Object.entries(r.values).filter(([k,v])=>statusOf(k,v)!=='normal').length;return`<div class="listrow"><div><b>${esc(r.name)}</b><div class="small muted">${fmtDate(r.date)} · ${Object.keys(r.values).length} values</div></div><span class="tag ${b?'high':'normal'}">${b?b+' flagged':'all normal'}</span></div>`}).join('')}`});
+}
+
+/* ==========================================================
+   JS-11. PREMIUM PLANS
+   ========================================================== */
+function panelPremium(){
+  const u=me(),cur=u.plan||'free';
+  const feats={free:['100 AI credits','Report upload and graphs','Medicine reminders'],plus:['500 AI credits','Everything in Free','Trend history for 12 months','Priority reminders'],pro:['Unlimited AI chat','Everything in Plus','Deep report analysis','Early access to new features'],family:['Unlimited AI chat','Everything in Pro','Up to 5 family profiles','Shared medicine calendar']};
+  const yearly=!!panelState.yearly;
+  openModal({title:'Premium plans',wide:true,body:`
+   <div class="card" style="background:var(--panel2);margin-bottom:16px"><div class="row" style="justify-content:space-between"><div><b>You've used <span class="creditTxt" style="color:var(--pulse)"></span> credits</b><div class="small muted">Current plan: ${PLANS[cur].name}</div></div><div class="row"><span class="chip ${!yearly?'on':''}" data-act="billing" data-y="0">Monthly</span><span class="chip ${yearly?'on':''}" data-act="billing" data-y="1">Yearly · save 20%</span></div></div></div>
+   <div class="plans">${Object.entries(PLANS).map(([id,p])=>{const price=yearly?Math.round(p.price*12*.8):p.price;return`<div class="plan ${id==='pro'?'best':''}"><h3>${p.name}${id==='pro'?' <span class="tag" style="background:var(--pulse-soft);color:var(--pulse)">Popular</span>':''}</h3><div class="price">${p.price?'₹'+price:'₹0'}<span class="small muted" style="font-weight:400">${p.price?(yearly?'/year':'/month'):''}</span></div><ul>${feats[id].map(f=>`<li>${f}</li>`).join('')}</ul>${id===cur?'<button class="btn ghost" disabled>Current plan</button>':`<button class="btn ${id==='pro'?'':'ghost'}" data-act="upgrade" data-plan="${id}">${p.price?'Choose '+p.name:'Switch to Free'}</button>`}</div>`}).join('')}</div>
+   <p class="small muted" style="margin-top:14px">Demo checkout: choosing a plan switches it instantly and no payment is taken.</p>`});
+}
+
+/* ==========================================================
+   JS-12. PROFILE
+   ========================================================== */
+function panelProfile(){
+  const u=me();const set=new Set(u.conditions||['None']);panelState.pconds=set;
+  openModal({title:'Profile',body:`
+   <div class="field"><label>Name</label><input class="input" id="p_name" value="${esc(u.name)}"></div>
+   <div class="field"><label>Email</label><input class="input" value="${esc(u.email)}" disabled></div>
+   <div class="row"><div class="field grow"><label>Blood group</label><select class="input" id="p_blood">${BLOOD.map(b=>`<option ${b===u.blood?'selected':''}>${b}</option>`).join('')}</select></div><div class="field grow"><label>Age</label><input class="input" id="p_age" type="number" value="${esc(u.age)}"></div></div>
+   <div class="field"><label>Conditions</label><div class="row" style="gap:8px">${CONDS.map(x=>`<span class="chip ${set.has(x)?'on':''}" data-act="pcond" data-c="${x}">${x}</span>`).join('')}</div></div>
+   <div class="field"><label>Other condition</label><input class="input" id="p_other" value="${esc((u.conditions||[]).filter(c=>!CONDS.includes(c)).join(', '))}"></div>
+   <div class="row" style="margin-top:8px"><button class="btn" data-act="saveProfile">Save changes</button><button class="btn ghost" data-act="logout">Log out</button></div>
+   <p class="small muted" style="margin-top:16px">Plan: ${PLANS[u.plan||'free'].name} · Credits used: ${u.used||0}/${limTxt()}</p>`});
+}
+
+/* ==========================================================
+   JS-13. EVENT ACTIONS (all clicks)
+   ========================================================== */
+const A={
+ close:()=>closeModal(),
+ open:el=>openPanel(el.dataset.panel),
+ authMode:el=>{auth={mode:el.dataset.m,step:'email',email:auth.email,code:'',codeAt:0,name:'',pass:''};renderAuth()},
+ forgot:()=>{auth.mode='reset';auth.step='email';renderAuth()},
+ sendCode:()=>{
+  const em=$('#a_email').value.trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){$('#a_err').textContent='Enter a valid email address.';return}
+  if(auth.mode==='signup'&&store.users[em]){$('#a_err').textContent='This email already has an account. Use Log in.';return}
+  if(auth.mode==='reset'&&!store.users[em]){$('#a_err').textContent='No account found for this email.';return}
+  auth.email=em;auth.step='code';makeCode();renderAuth()},
+ resend:()=>{makeCode();toast('New code sent')},
+ showInbox:()=>inboxModal(),
+ verifyCode:()=>{
+  const c=$('#a_code').value.trim();
+  if(Date.now()-auth.codeAt>600000){$('#a_err').textContent='This code expired. Send a new one.';return}
+  if(c!==auth.code){$('#a_err').textContent='That code is not correct. Check the code and try again.';return}
+  auth.step='password';renderAuth();toast('Email verified')},
+ setPass:()=>{
+  const p=$('#a_pass').value,p2=$('#a_pass2').value,n=$('#a_name')?$('#a_name').value.trim():'';
+  if(auth.mode==='signup'&&!n){$('#a_err').textContent='Enter your name.';return}
+  if(p.length<8){$('#a_err').textContent='Use at least 8 characters.';return}
+  if(p!==p2){$('#a_err').textContent='Passwords do not match.';return}
+  auth.pass=p;auth.name=n;
+  if(auth.mode==='reset'){store.users[auth.email].pass=hash(p);save();auth.mode='login';auth.step='email';renderAuth();toast('Password updated. Log in now.');return}
+  auth.step='details';renderAuth()},
+ cond:el=>{const c=el.dataset.c;if(c==='None')chosenConds=new Set(['None']);else{chosenConds.delete('None');chosenConds.has(c)?chosenConds.delete(c):chosenConds.add(c);if(!chosenConds.size)chosenConds.add('None')}renderCondsChips('#a_conds','cond',chosenConds)},
+ finishSignup:()=>{
+  const age=parseInt($('#a_age').value,10);
+  if(!age||age<1||age>120){$('#a_err').textContent='Enter a valid age.';return}
+  const conds=[...chosenConds];const o=$('#a_other').value.trim();if(o){const i=conds.indexOf('None');if(i>-1)conds.splice(i,1);conds.push(o)}
+  store.users[auth.email]={email:auth.email,name:auth.name,pass:hash(auth.pass),blood:$('#a_blood').value,age,conditions:conds,used:0,plan:'free',reports:[],meds:[],chat:[]};
+  store.session=auth.email;save();enterApp();toast('Welcome to VitaPilot')},
+ doLogin:()=>{
+  const em=$('#a_email').value.trim().toLowerCase(),p=$('#a_pass').value,u=store.users[em];
+  if(!u||u.pass!==hash(p)){$('#a_err').textContent='Email or password is incorrect.';return}
+  store.session=em;save();enterApp()},
+ logout:()=>{closeModal();store.session=null;save();auth={mode:'login',step:'email',email:'',code:'',codeAt:0,name:'',pass:''};showAuth()},
+ pickPdf:()=>$('#pdfInput').click(),
+ manualReport:()=>reviewReport('Manual entry',{},''),
+ sampleReports:()=>{loadSamples();toast('Sample reports added');panelReports()},
+ delReport:el=>{const u=me();u.reports=u.reports.filter(r=>r.id!==el.dataset.id);save();refreshDash();panelReports()},
+ viewGraphFor:el=>panelGraph(el.dataset.id),
+ saveReport:()=>{
+  const vals={};document.querySelectorAll('.r_v').forEach(i=>{if(i.value!==''&&isFinite(+i.value))vals[i.dataset.k]=+i.value});
+  if(!Object.keys(vals).length){$('#r_err').textContent='Enter at least one value.';return}
+  addReport($('#r_name').value.trim()||'Lab report',$('#r_date').value||todayStr(),vals);toast('Report saved');panelGraph()},
+ quick:el=>sendChat(el.dataset.q),
+ send:()=>sendChat(),
+ addMed:()=>{const n=$('#md_name').value.trim();if(!n){toast('Enter a medicine name');return}addMed('med',n,$('#md_dose').value.trim(),$('#md_time').value||'08:00');toast('Medicine added');panelMeds()},
+ takeMed:el=>{const m=me().meds.find(x=>x.id===el.dataset.id);if(!m)return;m.taken=m.taken||{};m.taken[todayStr()]=el.checked;save();refreshDash();if($('#modal').classList.contains('hide')===false&&$('.sheet-h h2')&&$('.sheet-h h2').textContent.startsWith('Medicines'))panelMeds()},
+ delMed:el=>{const u=me();u.meds=u.meds.filter(m=>m.id!==el.dataset.id);save();refreshDash();el.dataset.back==='supps'?panelSupps():panelMeds()},
+ notifPerm:()=>{try{Notification.requestPermission().then(p=>toast(p==='granted'?'Notifications on':'Notifications blocked'))}catch(e){toast('Notifications are not supported here')}},
+ doneMed:el=>{const m=me().meds.find(x=>x.id===el.dataset.id);if(m){m.taken=m.taken||{};m.taken[todayStr()]=true;save()}ringing=false;closeModal();refreshDash();toast('Marked as taken')},
+ snooze:el=>{const m=me().meds.find(x=>x.id===el.dataset.id);if(m){const d=new Date(Date.now()+300000);m.time=pad(d.getHours())+':'+pad(d.getMinutes());save()}ringing=false;closeModal();refreshDash();toast('Reminder in 5 minutes')},
+ addSupp:el=>{const s=suppList()[+el.dataset.i];addMed('supp',s.name,'','09:00');toast('Reminder set for 09:00 daily');panelSupps()},
+ billing:el=>{panelState.yearly=el.dataset.y==='1';panelPremium()},
+ upgrade:el=>{const p=el.dataset.plan;me().plan=p;save();refreshDash();toast(`You're now on the ${PLANS[p].name} plan`);panelPremium()},
+ pcond:el=>{const s=panelState.pconds,c=el.dataset.c;if(c==='None'){s.clear();s.add('None')}else{s.delete('None');s.has(c)?s.delete(c):s.add(c);if(!s.size)s.add('None')}renderCondsChips('.sheet-b .row .chip[data-act=pcond]','pcond',s,true)},
+ saveProfile:()=>{
+  const u=me(),n=$('#p_name').value.trim(),a=parseInt($('#p_age').value,10);
+  if(!n||!a){toast('Name and age are required');return}
+  const conds=[...panelState.pconds];const o=$('#p_other').value.trim();if(o){const i=conds.indexOf('None');if(i>-1)conds.splice(i,1);o.split(',').map(x=>x.trim()).filter(Boolean).forEach(x=>conds.push(x))}
+  Object.assign(u,{name:n,age:a,blood:$('#p_blood').value,conditions:conds});save();renderApp();closeModal();toast('Profile saved')}
+};
+function renderCondsChips(sel,act,set,byChip){
+  const nodes=byChip?document.querySelectorAll(sel):document.querySelectorAll(sel+' .chip');
+  nodes.forEach(n=>n.classList.toggle('on',set.has(n.dataset.c)));
+}
+document.addEventListener('click',e=>{
+  if(e.target.id==='modal'){closeModal();return}
+  const el=e.target.closest('[data-act]');if(!el)return;
+  if(el.tagName==='A')e.preventDefault();
+  if(el.type==='checkbox'&&el.dataset.act==='takeMed'){A.takeMed(el);return}
+  if(el.dataset.act==='takeMed')return;
+  const f=A[el.dataset.act];if(f)f(el,e);
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!$('#modal').classList.contains('hide'))closeModal();
+  if(e.key==='Enter'&&!$('#auth').classList.contains('hide')&&$('#modal').classList.contains('hide')){
+    const id={email:'sendCode',code:'verifyCode',password:'setPass',details:'finishSignup'}[auth.step];const act=auth.mode==='login'?'doLogin':id;
+    if(e.target.tagName==='INPUT'&&act)A[act]();}
+});
+$('#pdfInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)handlePdf(f)});
+
+/* ==========================================================
+   JS-14. START-UP
+   ========================================================== */
+function showAuth(){$('#app').classList.add('hide');$('#auth').classList.remove('hide');renderAuth()}
+function enterApp(){$('#auth').classList.add('hide');$('#app').classList.remove('hide');renderApp()}
+setInterval(tick,1000);
+if(store.session&&store.users[store.session])enterApp();else{auth.mode='signup';showAuth()}
+</script>
+</body>
+</html>
